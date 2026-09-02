@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>별립법 제빵 계산기 (노른자 1 기준 & 머랭 1:1 배합)</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-sub: #64748b;
+      --border: #e2e8f0;
+      --accent: #f59e0b;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; text-align: center; }
+    .subtitle { text-align: center; color: var(--text-sub); font-size: 0.85rem; margin-bottom: 16px; }
+    
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+    input[type="number"], input[type="text"], select {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      outline: none;
+      width: 100%;
+    }
+    input:focus { border-color: var(--primary); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* Base Sweetness Badge Card */
+    .base-sweetness-box {
+      background: #fffbeb;
+      border: 1.5px solid #fde68a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+    .base-title { font-weight: 700; color: #b45309; font-size: 0.88rem; margin-bottom: 4px; }
+    .base-value { font-size: 1.15rem; font-weight: 800; color: #d97706; }
+    .base-desc { font-size: 0.8rem; color: #78350f; margin-top: 3px; }
+
+    /* Meringue Box */
+    .meringue-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    /* Final Sweetness Result Box */
+    .tune-box {
+      background: #fdf4ff;
+      border: 1px solid #f0abfc;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+    .tune-row { display: flex; justify-content: space-between; padding: 4px 0; }
+    .tune-highlight { font-weight: 700; color: #a21caf; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td {
+      padding: 8px 4px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    th { font-weight: 600; color: var(--text-sub); }
+    .btn-del {
+      background: none;
+      border: none;
+      color: var(--danger);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+    
+    .actions { display: flex; gap: 6px; margin-top: 12px; }
+    .btn {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-size: 0.85rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+
+    /* Checklist */
+    .prep-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.85rem;
+    }
+    .prep-box h4 { color: #166534; margin-bottom: 6px; font-size: 0.9rem; }
+    .prep-box ul { list-style: none; margin-bottom: 8px; }
+    .prep-box li { display: flex; justify-content: space-between; padding: 2px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>별립법 제빵 & 감미 밸런스 계산기</h1>
+  <p class="subtitle">노른자 = 1.0 기준 배합 ➔ 머랭(1:1) 투입 비율 및 총 감미 제어</p>
+
+  <!-- 1. 기준 노른자 중량 설정 -->
+  <div class="card">
+    <div class="card-title">1. 기준 노른자 설정 (Yolk = 1.0)</div>
+    <div class="form-group">
+      <label for="yolkWeight">노른자 총 중량 (g)</label>
+      <input type="number" id="yolkWeight" value="100" min="1" step="1" oninput="calculateAll()">
+      <small style="color:var(--text-sub);">* 이 중량을 기준(1.0)으로 아래의 모든 본반죽 비율이 계산됩니다.</small>
+    </div>
+  </div>
+
+  <!-- 2. 본반죽 배합표 -->
+  <div class="card">
+    <div class="card-title">
+      <span>2. 본반죽 재료 배합 (노른자 1 기준)</span>
+    </div>
+    <table id="ingredientTable">
+      <thead>
+        <tr>
+          <th style="width: 32%;">재료명</th>
+          <th style="width: 18%;">비율 (vs노른자)</th>
+          <th style="width: 16%;">감미지수</th>
+          <th style="width: 16%;">계량 (g)</th>
+          <th style="width: 12%;">감미당량</th>
+          <th style="width: 6%;"></th>
+        </tr>
+      </thead>
+      <tbody id="ingredientBody">
+        <!-- 동적 렌더링 -->
+      </tbody>
+    </table>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="addIngredientRow()">+ 재료 추가</button>
+      <button class="btn btn-primary" onclick="saveRecipe()">배합비 저장</button>
+      <button class="btn btn-secondary" onclick="resetToDefault()">기본 배합 복원</button>
+    </div>
+
+    <!-- 머랭 투입 전 기본 감미 인지 카드 -->
+    <div class="base-sweetness-box">
+      <div class="base-title">💡 [인지] 머랭 투입 전 본반죽 기본 정보</div>
+      <div>본반죽 총 중량: <strong id="baseBatterTotalGrams">0.0</strong>g</div>
+      <div style="margin-top:2px;">
+        본반죽 기본 감미 합계: <span class="base-value" id="baseSweetGrams">0.0</span>g 
+        (노른자 대비 감미율 <strong id="baseSweetRatio">0.0</strong>%)
+      </div>
+      <p class="base-desc">
+        * 설탕(0.6), 물엿(0.2), 전화당(0.3), 맛술 등의 배합으로 머랭 투입 전 이미 형성된 단맛 기준점입니다.
+      </p>
+    </div>
+  </div>
+
+  <!-- 3. 머랭 배합 및 투입 비율 -->
+  <div class="card">
+    <div class="card-title">3. 머랭 설정 (흰자 1 : 설탕 1 배합)</div>
+    
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="meringueInputRatio">본반죽 대비 머랭 투입 비율 (기본 0.2)</label>
+        <input type="number" id="meringueInputRatio" value="0.2" min="0" max="1" step="0.05" oninput="calculateAll()">
+        <small style="color:var(--text-sub);">* 본반죽 총량의 20% 투입 (0.2배)</small>
+      </div>
+      <div class="form-group">
+        <label>머랭 자체 내부 비율</label>
+        <input type="text" value="흰자 1.0 : 설탕 1.0 (50% : 50%)" disabled style="background:#f1f5f9; color:#64748b;">
+      </div>
+    </div>
+
+    <div class="meringue-box">
+      <div class="tune-row">
+        <span>투입할 머랭 총 중량:</span>
+        <span><strong id="meringueTotalGrams">0.0</strong> g</span>
+      </div>
+      <div class="tune-row">
+        <span>├ 필요 흰자 (50%):</span>
+        <strong id="meringueWhiteGrams">0.0</strong> g
+      </div>
+      <div class="tune-row">
+        <span>└ 머랭용 설탕 (50%):</span>
+        <strong id="meringueSugarGrams" style="color:#2563eb;">0.0</strong> g
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 감미 밸런스 인지 & 조정 -->
+  <div class="card">
+    <div class="card-title">4. 최종 감미 분석 및 본반죽 설탕 조절 도우미</div>
+    
+    <div class="tune-box">
+      <div class="tune-row">
+        <span>머랭 투입 후 완성 반죽 총 중량:</span>
+        <span><strong id="finalDoughWeight">0.0</strong> g</span>
+      </div>
+      <div class="tune-row">
+        <span>본반죽 감미 (설탕+물엿+전화당 등):</span>
+        <span>+ <strong id="dispBaseSweet">0.0</strong> g</span>
+      </div>
+      <div class="tune-row">
+        <span>머랭 설탕으로 추가되는 감미 (설탕 100%):</span>
+        <span class="tune-highlight">+ <strong id="dispMeringueSugar">0.0</strong> g</span>
+      </div>
+      <div class="tune-row" style="border-top: 1px solid #f0abfc; margin-top:4px; padding-top:4px; font-weight:700;">
+        <span>최종 완성 반죽 총 감미량:</span>
+        <span class="tune-highlight"><strong id="finalTotalSweetness">0.0</strong> g (노른자 대비 <span id="finalSweetRatio">0.0</span>%)</span>
+      </div>
+      <div class="tune-row">
+        <span>완성 반죽의 체감 감미 농도 (총감미 ÷ 총반죽):</span>
+        <span><strong id="finalDoughBrix">0.0</strong>%</span>
+      </div>
+    </div>
+
+    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px; margin-top:10px; font-size:0.85rem;">
+      <strong>💡 감미 밸런스 팁:</strong>
+      <p style="color:var(--text-sub); margin-top:2px;">
+        머랭 투입으로 설탕 <span id="tipSugarGrams" style="color:#2563eb; font-weight:700;">0.0</span>g이 추가되므로, 
+        초기 본반죽 단맛 수준을 유지하고 싶다면 2번 표의 <strong>본반죽 설탕 비율을 0.6에서 약 <span id="recommendedSugarRatio" style="color:#a21caf; font-weight:700;">0.0</span> 정도로 낮춰 조절</strong>하시면 일정한 단맛을 유지할 수 있습니다.
+      </p>
+    </div>
+  </div>
+
+  <!-- 5. 실전 계량 체크리스트 -->
+  <div class="card">
+    <div class="card-title">5. 실전 계량 체크리스트 (Mise en Place)</div>
+    <div class="prep-box">
+      <h4>[볼 1] 흰자 머랭 (1:1 비율)</h4>
+      <ul>
+        <li><span>계란 흰자</span><strong id="chkWhite">0.0g</strong></li>
+        <li><span>머랭용 백설탕</span><strong id="chkMeringueSugar" style="color:#2563eb;">0.0g</strong></li>
+      </ul>
+      
+      <h4>[볼 2] 노른자 본반죽용 (노른자 중탕 후 혼합)</h4>
+      <ul id="chkBatterList">
+        <!-- 노른자, 본반죽 설탕, 물엿, 전화당, 박력분 등 출력 -->
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // 노른자 = 1.0 기준 기본 배합
+    // sweetFactor: 백설탕 1.0 기준 상대 감미도
+    const defaultIngredients = [
+      { name: "백설탕", ratio: 0.6, sweetFactor: 1.0 },
+      { name: "물엿", ratio: 0.2, sweetFactor: 0.5 },
+      { name: "전화당 (트리몰린)", ratio: 0.3, sweetFactor: 1.25 },
+      { name: "박력분", ratio: 0.8, sweetFactor: 0 },
+      { name: "맛술 (미림)", ratio: 0.1, sweetFactor: 0.35 },
+      { name: "베이킹소다", ratio: 0.008, sweetFactor: 0 }
+    ];
+
+    let ingredients = [];
+
+    window.addEventListener("DOMContentLoaded", () => {
+      loadSavedData();
+      calculateAll();
+    });
+
+    function loadSavedData() {
+      const saved = localStorage.getItem("dorayaki_yolk_base_v4");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          document.getElementById("yolkWeight").value = parsed.yolkWeight || 100;
+          document.getElementById("meringueInputRatio").value = parsed.meringueInputRatio || 0.2;
+          ingredients = parsed.ingredients || defaultIngredients;
+        } catch (e) {
+          ingredients = JSON.parse(JSON.stringify(defaultIngredients));
+        }
+      } else {
+        ingredients = JSON.parse(JSON.stringify(defaultIngredients));
+      }
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("ingredientBody");
+      tbody.innerHTML = "";
+      ingredients.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" value="${item.name}" onchange="updateItem(${index}, 'name', this.value)"></td>
+          <td><input type="number" step="0.01" value="${item.ratio}" oninput="updateItem(${index}, 'ratio', this.value)"></td>
+          <td><input type="number" step="0.05" value="${item.sweetFactor}" oninput="updateItem(${index}, 'sweetFactor', this.value)" title="백설탕=1.0 기준 감미도"></td>
+          <td><strong id="gram-${index}">0.0</strong>g</td>
+          <td><span id="sweet-equiv-${index}" style="color:#64748b; font-size:0.8rem;">0.0g</span></td>
+          <td><button class="btn-del" onclick="removeIngredientRow(${index})">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateItem(index, key, val) {
+      if (key === 'name') {
+        ingredients[index].name = val;
+      } else {
+        ingredients[index][key] = parseFloat(val) || 0;
+      }
+      calculateAll();
+    }
+
+    function addIngredientRow() {
+      ingredients.push({ name: "새 재료", ratio: 0.1, sweetFactor: 0 });
+      renderTable();
+      calculateAll();
+    }
+
+    function removeIngredientRow(index) {
+      ingredients.splice(index, 1);
+      renderTable();
+      calculateAll();
+    }
+
+    function calculateAll() {
+      const yolkWeight = parseFloat(document.getElementById("yolkWeight").value) || 0;
+      const meringueInputRatio = parseFloat(document.getElementById("meringueInputRatio").value) || 0.2;
+
+      // 1. 본반죽 중량 및 기본 감미 합산 (노른자 자체 중량 포함)
+      let baseBatterTotalGrams = yolkWeight; // 노른자 기본 포함
+      let baseSweetnessGrams = 0;
+
+      ingredients.forEach((item, index) => {
+        const grams = yolkWeight * (item.ratio || 0);
+        const sweetEquiv = grams * (item.sweetFactor || 0);
+
+        baseBatterTotalGrams += grams;
+        baseSweetnessGrams += sweetEquiv;
+
+        const cellGram = document.getElementById(`gram-${index}`);
+        const cellSweet = document.getElementById(`sweet-equiv-${index}`);
+        if (cellGram) cellGram.innerText = grams.toFixed(1);
+        if (cellSweet) cellSweet.innerText = sweetEquiv > 0 ? `${sweetEquiv.toFixed(1)}g` : '-';
+      });
+
+      // 본반죽 기본 정보 표시
+      document.getElementById("baseBatterTotalGrams").innerText = baseBatterTotalGrams.toFixed(1);
+      document.getElementById("baseSweetGrams").innerText = baseSweetnessGrams.toFixed(1);
+      const baseSweetRatio = yolkWeight > 0 ? (baseSweetnessGrams / yolkWeight) * 100 : 0;
+      document.getElementById("baseSweetRatio").innerText = baseSweetRatio.toFixed(1);
+
+      // 2. 머랭 계산 (본반죽 중량 대비 비율, 흰자 1 : 설탕 1)
+      const meringueTotalGrams = baseBatterTotalGrams * meringueInputRatio;
+      const meringueWhiteGrams = meringueTotalGrams * 0.5;
+      const meringueSugarGrams = meringueTotalGrams * 0.5;
+
+      document.getElementById("meringueTotalGrams").innerText = meringueTotalGrams.toFixed(1);
+      document.getElementById("meringueWhiteGrams").innerText = meringueWhiteGrams.toFixed(1);
+      document.getElementById("meringueSugarGrams").innerText = meringueSugarGrams.toFixed(1);
+
+      // 3. 최종 반죽 분석
+      const finalDoughWeight = baseBatterTotalGrams + meringueTotalGrams;
+      const finalTotalSweetness = baseSweetnessGrams + meringueSugarGrams; // 설탕 감미도=1.0
+      const finalSweetRatio = yolkWeight > 0 ? (finalTotalSweetness / yolkWeight) * 100 : 0;
+      const finalDoughBrix = finalDoughWeight > 0 ? (finalTotalSweetness / finalDoughWeight) * 100 : 0;
+
+      document.getElementById("finalDoughWeight").innerText = finalDoughWeight.toFixed(1);
+      document.getElementById("dispBaseSweet").innerText = baseSweetnessGrams.toFixed(1);
+      document.getElementById("dispMeringueSugar").innerText = meringueSugarGrams.toFixed(1);
+      document.getElementById("finalTotalSweetness").innerText = finalTotalSweetness.toFixed(1);
+      document.getElementById("finalSweetRatio").innerText = finalSweetRatio.toFixed(1);
+      document.getElementById("finalDoughBrix").innerText = finalDoughBrix.toFixed(1);
+
+      // 감미 밸런스 추천 팁 (머랭 설탕만큼 본반죽 설탕 감량 제안)
+      document.getElementById("tipSugarGrams").innerText = meringueSugarGrams.toFixed(1);
+      const currentSugarRatio = ingredients[0] && ingredients[0].name.includes("설탕") ? ingredients[0].ratio : 0.6;
+      const recommendedRatio = Math.max(0, currentSugarRatio - (yolkWeight > 0 ? meringueSugarGrams / yolkWeight : 0));
+      document.getElementById("recommendedSugarRatio").innerText = recommendedRatio.toFixed(2);
+
+      // 4. 실전 체크리스트 출력
+      document.getElementById("chkWhite").innerText = `${meringueWhiteGrams.toFixed(1)}g`;
+      document.getElementById("chkMeringueSugar").innerText = `${meringueSugarGrams.toFixed(1)}g`;
+
+      const summaryList = document.getElementById("chkBatterList");
+      summaryList.innerHTML = `
+        <li><span>계란 노른자 (기준)</span><strong>${yolkWeight.toFixed(1)}g</strong></li>
+      `;
+
+      ingredients.forEach(item => {
+        const g = yolkWeight * (item.ratio || 0);
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${item.name} (비율 ${item.ratio})</span><strong>${g.toFixed(1)}g</strong>`;
+        summaryList.appendChild(li);
+      });
+    }
+
+    function saveRecipe() {
+      const dataToSave = {
+        yolkWeight: document.getElementById("yolkWeight").value,
+        meringueInputRatio: document.getElementById("meringueInputRatio").value,
+        ingredients: ingredients
+      };
+      localStorage.setItem("dorayaki_yolk_base_v4", JSON.stringify(dataToSave));
+      alert("노른자 기준 배합비와 머랭 설정이 브라우저에 저장되었습니다.");
+    }
+
+    function resetToDefault() {
+      if (confirm("기본 배합비(설탕0.6, 물엿0.2, 전화당0.3)로 복원하시겠습니까?")) {
+        localStorage.removeItem("dorayaki_yolk_base_v4");
+        document.getElementById("yolkWeight").value = 100;
+        document.getElementById("meringueInputRatio").value = 0.2;
+        ingredients = JSON.parse(JSON.stringify(defaultIngredients));
+        renderTable();
+        calculateAll();
+      }
+    }
+  </script>
+</body>
+</html>
