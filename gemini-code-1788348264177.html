@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>제빵 배합비 & 설탕 스마트 계산기</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-sub: #64748b;
+      --border: #e2e8f0;
+      --accent: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; color: var(--text); text-align: center; }
+    .subtitle { text-align: center; color: var(--text-sub); font-size: 0.9rem; margin-bottom: 20px; }
+    
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary);
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+    label { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    input[type="number"], input[type="text"] {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--primary); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .egg-info {
+      display: flex;
+      justify-content: space-around;
+      background: #eff6ff;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #1e40af;
+      margin-top: 8px;
+    }
+
+    /* Sugar Allocator Box */
+    .sugar-result-box {
+      background: #fdf4ff;
+      border: 1px solid #f0abfc;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+    .sugar-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      padding: 4px 0;
+    }
+    .sugar-highlight { font-weight: 700; color: #a21caf; }
+
+    /* Ingredient Table */
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td {
+      padding: 10px 6px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    th { font-weight: 600; color: var(--text-sub); }
+    td input { width: 100%; }
+    .btn-del {
+      background: none;
+      border: none;
+      color: var(--danger);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    
+    /* Action Buttons */
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+    .btn {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+    .btn-secondary:hover { background: #cbd5e1; }
+
+    /* Mise en place summary */
+    .prep-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.9rem;
+    }
+    .prep-box h4 { color: #166534; margin-bottom: 8px; }
+    .prep-box ul { list-style: none; margin-bottom: 10px; }
+    .prep-box li { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+  <h1>제빵 배합비 & 설탕 계산기</h1>
+  <p class="subtitle">전란 기준 배합 및 머랭·본반죽 설탕 자동 연산</p>
+
+  <div class="card">
+    <div class="card-title">1. 기준 계란 설정 (전란 기준)</div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="eggTotal">전란 총 무게 (g)</label>
+        <input type="number" id="eggTotal" value="100" min="1" step="1" oninput="calculateAll()">
+      </div>
+      <div class="form-group">
+        <label for="whiteRatio">흰자 추정 비율 (%)</label>
+        <input type="number" id="whiteRatio" value="62" min="1" max="99" step="1" oninput="calculateAll()">
+      </div>
+    </div>
+    <div class="egg-info">
+      <span>흰자 (머랭용): <strong id="calcWhiteWeight">62.0</strong>g</span>
+      <span>노른자 (본반죽용): <strong id="calcYolkWeight">38.0</strong>g</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">2. 설탕 목표량 & 머랭 분배 연산</div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="totalSugarRatio">전체 목표 설탕 비율 (% vs 전란)</label>
+        <input type="number" id="totalSugarRatio" value="85" min="0" step="0.5" oninput="calculateAll()">
+      </div>
+      <div class="form-group">
+        <label for="meringueSugarRatio">머랭용 설탕 비율 (% vs 흰자)</label>
+        <input type="number" id="meringueSugarRatio" value="50" min="0" step="0.5" oninput="calculateAll()">
+      </div>
+    </div>
+
+    <div class="sugar-result-box">
+      <div class="sugar-row">
+        <span>목표 전체 설탕량:</span>
+        <span><strong id="totalSugarGrams">0</strong> g</span>
+      </div>
+      <div class="sugar-row">
+        <span>머랭 투입 설탕 (흰자 대비 비율 적용):</span>
+        <span class="sugar-highlight"><strong id="meringueSugarGrams">0</strong> g</span>
+      </div>
+      <div class="sugar-row" style="border-top: 1px dashed #f0abfc; margin-top: 6px; padding-top: 6px;">
+        <span>본반죽 자동 배정 설탕:</span>
+        <span class="sugar-highlight"><strong id="batterSugarGrams">0</strong> g (<span id="batterSugarRatio">0</span>% vs 전란)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">3. 재료 목록 (전란 중량 대비 %)</div>
+    <table id="ingredientTable">
+      <thead>
+        <tr>
+          <th style="width: 45%;">재료명</th>
+          <th style="width: 25%;">비율 (%)</th>
+          <th style="width: 20%;">계산 (g)</th>
+          <th style="width: 10%;"></th>
+        </tr>
+      </thead>
+      <tbody id="ingredientBody">
+        </tbody>
+    </table>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="addIngredientRow()">+ 재료 추가</button>
+      <button class="btn btn-primary" onclick="saveRecipe()">배합비 브라우저 저장</button>
+      <button class="btn btn-secondary" onclick="resetToDefault()">기본값 복원</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">4. 공정별 계량 체크리스트</div>
+    <div class="prep-box">
+      <h4>[볼 1] 머랭용</h4>
+      <ul>
+        <li><span>흰자</span><strong id="summaryWhite">0g</strong></li>
+        <li><span>머랭용 설탕</span><strong id="summaryMeringueSugar">0g</strong></li>
+      </ul>
+      
+      <h4>[볼 2] 노른자 본반죽용 (중탕 후 혼합)</h4>
+      <ul id="summaryBatterList">
+        </ul>
+    </div>
+  </div>
+
+  <script>
+    // 기본 레시피 프리셋
+    const defaultIngredients = [
+      { name: "박력분", ratio: 75 },
+      { name: "베이킹소다", ratio: 0.8 },
+      { name: "전화당", ratio: 12 },
+      { name: "물엿", ratio: 15 },
+      { name: "맛술 (미림)", ratio: 10 }
+    ];
+
+    let ingredients = [];
+
+    // 로드 시 실행
+    window.addEventListener("DOMContentLoaded", () => {
+      loadSavedData();
+      calculateAll();
+    });
+
+    function loadSavedData() {
+      const saved = localStorage.getItem("dorayaki_recipe_settings");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          document.getElementById("eggTotal").value = parsed.eggTotal || 100;
+          document.getElementById("whiteRatio").value = parsed.whiteRatio || 62;
+          document.getElementById("totalSugarRatio").value = parsed.totalSugarRatio || 85;
+          document.getElementById("meringueSugarRatio").value = parsed.meringueSugarRatio || 50;
+          ingredients = parsed.ingredients || defaultIngredients;
+        } catch (e) {
+          ingredients = [...defaultIngredients];
+        }
+      } else {
+        ingredients = [...defaultIngredients];
+      }
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("ingredientBody");
+      tbody.innerHTML = "";
+      ingredients.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" value="${item.name}" onchange="updateItemName(${index}, this.value)"></td>
+          <td><input type="number" step="0.1" value="${item.ratio}" oninput="updateItemRatio(${index}, this.value)"></td>
+          <td><strong id="calc-gram-${index}">0</strong>g</td>
+          <td><button class="btn-del" onclick="removeIngredientRow(${index})">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateItemName(index, val) {
+      ingredients[index].name = val;
+      calculateAll();
+    }
+
+    function updateItemRatio(index, val) {
+      ingredients[index].ratio = parseFloat(val) || 0;
+      calculateAll();
+    }
+
+    function addIngredientRow() {
+      ingredients.push({ name: "새 재료", ratio: 10 });
+      renderTable();
+      calculateAll();
+    }
+
+    function removeIngredientRow(index) {
+      ingredients.splice(index, 1);
+      renderTable();
+      calculateAll();
+    }
+
+    function calculateAll() {
+      const eggTotal = parseFloat(document.getElementById("eggTotal").value) || 0;
+      const whiteRatio = parseFloat(document.getElementById("whiteRatio").value) || 62;
+      const totalSugarRatio = parseFloat(document.getElementById("totalSugarRatio").value) || 0;
+      const meringueSugarRatio = parseFloat(document.getElementById("meringueSugarRatio").value) || 0;
+
+      // 1. 흰자/노른자 분리 연산
+      const whiteWeight = eggTotal * (whiteRatio / 100);
+      const yolkWeight = Math.max(0, eggTotal - whiteWeight);
+
+      document.getElementById("calcWhiteWeight").innerText = whiteWeight.toFixed(1);
+      document.getElementById("calcYolkWeight").innerText = yolkWeight.toFixed(1);
+
+      // 2. 설탕 스마트 연산
+      const totalSugarGrams = eggTotal * (totalSugarRatio / 100);
+      const meringueSugarGrams = whiteWeight * (meringueSugarRatio / 100);
+      const batterSugarGrams = Math.max(0, totalSugarGrams - meringueSugarGrams);
+      const batterSugarRatio = eggTotal > 0 ? (batterSugarGrams / eggTotal) * 100 : 0;
+
+      document.getElementById("totalSugarGrams").innerText = totalSugarGrams.toFixed(1);
+      document.getElementById("meringueSugarGrams").innerText = meringueSugarGrams.toFixed(1);
+      document.getElementById("batterSugarGrams").innerText = batterSugarGrams.toFixed(1);
+      document.getElementById("batterSugarRatio").innerText = batterSugarRatio.toFixed(1);
+
+      // 3. 재료 테이블 연산
+      ingredients.forEach((item, index) => {
+        const grams = eggTotal * (item.ratio / 100);
+        const cell = document.getElementById(`calc-gram-${index}`);
+        if (cell) cell.innerText = grams.toFixed(1);
+      });
+
+      // 4. 공정별 요약 업데이트
+      document.getElementById("summaryWhite").innerText = `${whiteWeight.toFixed(1)}g`;
+      document.getElementById("summaryMeringueSugar").innerText = `${meringueSugarGrams.toFixed(1)}g`;
+
+      const summaryList = document.getElementById("summaryBatterList");
+      summaryList.innerHTML = `
+        <li><span>노른자</span><strong>${yolkWeight.toFixed(1)}g</strong></li>
+        <li><span>본반죽 설탕 (자동차감분)</span><strong style="color:#a21caf;">${batterSugarGrams.toFixed(1)}g</strong></li>
+      `;
+
+      ingredients.forEach(item => {
+        const g = eggTotal * (item.ratio / 100);
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${item.name}</span><strong>${g.toFixed(1)}g</strong>`;
+        summaryList.appendChild(li);
+      });
+    }
+
+    function saveRecipe() {
+      const dataToSave = {
+        eggTotal: document.getElementById("eggTotal").value,
+        whiteRatio: document.getElementById("whiteRatio").value,
+        totalSugarRatio: document.getElementById("totalSugarRatio").value,
+        meringueSugarRatio: document.getElementById("meringueSugarRatio").value,
+        ingredients: ingredients
+      };
+      localStorage.setItem("dorayaki_recipe_settings", JSON.stringify(dataToSave));
+      alert("배합비와 설정이 브라우저에 저장되었습니다.");
+    }
+
+    function resetToDefault() {
+      if (confirm("기본 배합비 설정으로 되돌리시겠습니까?")) {
+        localStorage.removeItem("dorayaki_recipe_settings");
+        document.getElementById("eggTotal").value = 100;
+        document.getElementById("whiteRatio").value = 62;
+        document.getElementById("totalSugarRatio").value = 85;
+        document.getElementById("meringueSugarRatio").value = 50;
+        ingredients = [...defaultIngredients];
+        renderTable();
+        calculateAll();
+      }
+    }
+  </script>
+</body>
+</html>
